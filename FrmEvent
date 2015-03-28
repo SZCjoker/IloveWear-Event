@@ -1,0 +1,545 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.IO;
+using System.Configuration;
+using System.Data.SqlClient;
+using WINEVENT.Properties;
+using System.Drawing.Imaging;
+namespace WINEVENT
+{
+    public partial class FrmEvent : Form
+    {
+        bool btn = false;
+        byte[] bytes2;//活動圖OR獎品
+        
+        byte[] bytes;//背景圖陣列
+        public FrmEvent()
+        {
+            InitializeComponent();
+            this.pictureBox1.AllowDrop = true;
+            this.pictureBox1.DragEnter += pictureBox1_DragEnter;      
+            this.pictureBox1.DragDrop +=pictureBox1_DragDrop;
+            this.Height = 1000; this.Width = 1400;
+           
+        }
+
+      
+
+        
+       
+void pictureBox1_DragDrop(object sender, DragEventArgs e)
+{
+    
+    fp.splitContainer5.Panel1.BackgroundImage = this.pictureBox1.Image;
+    fp.splitContainer5.Panel1.BackgroundImageLayout = ImageLayout.Stretch;
+    fp.splitContainer5.Panel2.BackgroundImage = this.pictureBox1.Image;	//TODO
+    fp.splitContainer5.Panel2.BackgroundImageLayout = ImageLayout.Stretch;
+
+}
+
+void pictureBox1_DragEnter(object sender, DragEventArgs e)
+{
+    e.Effect = DragDropEffects.Copy;
+    string[] filenames = (string[])e.Data.GetData(System.Windows.Forms.DataFormats.FileDrop);
+
+    //用陣列接住拖曳進來的檔案括號轉型 資料格式是屬於拖曳進來的檔案
+    this.pictureBox1.Image = Image.FromFile(filenames[0]);	
+   
+}
+            
+        FrmPrivew fp = new FrmPrivew();
+     
+        
+        string[] prizPic = new string[1];//建立一個新陣列
+
+        private void Getpictrue(string[] PictureFiles)
+        {//用字串陣列存圖案
+
+            for (int i = 0; i <= PictureFiles.Length - 1; i++)
+            {//勿超過陣列最大值記得減一
+                try//防止非image檔案
+                {
+                    PictureBox p = new PictureBox();
+                    p.Image = (Image)Image.FromFile(PictureFiles[i]);
+                    //(轉型為IMAGE類別)圖片用image類別的靜態方法fromfile (讀取方法指定的型別(此為陣列)(陣列內元素的數量))
+                    p.SizeMode = PictureBoxSizeMode.StretchImage;
+                    p.BorderStyle = BorderStyle.FixedSingle;
+                    //p.MouseEnter += p_MouseEnter;
+                    
+
+                    //this.flowLayoutPanel1.Controls.Add(p);
+                    this.flowLayoutPanel1.Controls.Add(p);
+                }
+                catch { }
+
+            }
+
+        }
+
+ 
+     
+
+        private void FrmEvent_Load(object sender, EventArgs e)
+        {
+            // TODO:  這行程式碼會將資料載入 'iLoveWearDataSet.EventPicture' 資料表。您可以視需要進行移動或移除。
+           
+
+            GetForm(fp);
+
+            this.toolStripComboBox1.Text = "請選擇";
+           
+
+        }
+        public void GetForm(Form f)//內部視窗呼叫方法
+        {
+            this.splitContainer4.Panel2.Controls.Clear();
+            f.Dock = DockStyle.Fill;
+            f.Show();
+            f.TopLevel = false;
+            this.splitContainer4.Panel2.Controls.Add(f);
+        }
+
+        //活動主題 即時顯示
+        private void textBox1_TextChanged(object sender, EventArgs e)
+        {
+            if (this.textBox1.Text != null)
+            {
+                fp.label2.Text = this.textBox1.Text;
+
+            }
+        }
+
+      
+
+        //清除圖片區圖片
+        private void toolStripButton2_Click(object sender, EventArgs e)
+        {
+            if (this.flowLayoutPanel1.Controls != null)
+            {
+                this.flowLayoutPanel1.Controls.Clear();
+            }
+
+        }
+
+  
+        //日期選擇器重設--設為今日
+        private void button2_Click(object sender, EventArgs e)
+        {
+            this.dateTimePicker1.Value = DateTime.Now;
+            this.dateTimePicker2.Value = DateTime.Now;
+            //reset the event's date
+        }
+
+        private void dateTimePicker1_ValueChanged(object sender, EventArgs e)
+        {
+            fp.label5.Text = this.dateTimePicker1.Value.ToShortDateString();
+        }
+        //show event's date
+        private void dateTimePicker2_ValueChanged(object sender, EventArgs e)
+        {
+            fp.label6.Text = this.dateTimePicker2.Value.ToShortDateString();
+        }
+        //送出資料到資料庫
+        private void button3_Click(object sender, EventArgs e)
+        {
+            //開連線新增資料進資料庫 活動細節
+            int NewId;//紀錄產生的活動ID
+            using (SqlConnection con = new SqlConnection(Settings.Default.ILWADO))
+            {//下command
+                using (SqlCommand cmd = new SqlCommand("Insert into  Event (BackgroundImage,EventName,BeginDate,EndDate,EventDes) Values(@BackgroundImage,@EventName,@BeginDate,@EndDate,@EventDes) SELECT CAST(scope_identity() AS int)", con))
+                {
+                    con.Open();
+
+                    using (MemoryStream ms = new MemoryStream())// make an istance 
+                    {
+                        //if (this.toolStripComboBox1.SelectedIndex == 2)// insert   backgroudIMG and event data 
+                        //{
+                        this.pictureBox1.Image.Save(ms, ImageFormat.Bmp);
+                        bytes = ms.GetBuffer();
+                        //}
+                    }
+                    //=============================
+
+                    cmd.Parameters.Add("@EventName", SqlDbType.NVarChar, (50)).Value = this.textBox1.Text;
+                    cmd.Parameters.Add("@BeginDate", SqlDbType.Date).Value = this.dateTimePicker1.Value.ToShortTimeString();
+                    cmd.Parameters.Add("@EndDate", SqlDbType.Date).Value = this.dateTimePicker2.Value.ToShortTimeString();
+                    cmd.Parameters.Add("@BackgroundImage", SqlDbType.VarBinary).Value = bytes;
+                    cmd.Parameters.Add("@EventDes", SqlDbType.NVarChar).Value = this.textBox2.Text;
+                    //cmd.ExecuteNonQuery();
+                    NewId = (int)cmd.ExecuteScalar();//取得目前此筆輸入的ID
+                    MessageBox.Show("新增第" + NewId + "活動");
+                }
+
+                con.Close();//關連線
+            }
+        }
+                              
+                 
+
+
+         
+    
+
+        //活動圖預覽時
+        private void flowLayoutPanel1_DragDrop(object sender, DragEventArgs e)
+        {
+            if (this.toolStripComboBox1.SelectedIndex == 1)
+            {
+               
+                
+                string[] PictureFiles = (string[])e.Data.GetData(DataFormats.FileDrop);
+
+                if (e.Data.GetDataPresent(DataFormats.FileDrop))
+                {//判斷 事件驅動(e)傳進來的檔案用getdata方法來判別 (靜態類別用來驗證檔案類型此FILEDROP是唯讀默認拖進來的檔案是相等)
+                    //string s = (string)e.Data.GetData(DataFormats.FileDrop);其實FileDrop是string沒錯
+                    //但是我們可能會一次拉很多個file進來，所以要用一個陣列去接住它
+
+                    Getpictrue(PictureFiles);
+
+                    for (int i = 0; i <= PictureFiles.Length - 1; i++)
+                    {
+                       
+                        PictureBox p = new PictureBox();
+                        p.Name = i.ToString();
+                        p.Height = 300;
+                        p.Width = 300;
+                        p.SizeMode = PictureBoxSizeMode.StretchImage;
+                        p.BorderStyle = BorderStyle.FixedSingle;
+                        p.Image = (Image)Image.FromFile(PictureFiles[i]);
+                        fp.flowLayoutPanel2.Controls.Add(p);
+                                                                    
+                    }
+                }
+            }
+                //獎品圖預覽
+            else if (this.toolStripComboBox1.SelectedIndex == 0)
+            {
+                
+                prizPic = (string[])e.Data.GetData(DataFormats.FileDrop);
+                if (e.Data.GetDataPresent(DataFormats.FileDrop))
+                {//判斷 事件驅動(e)傳進來的檔案用getdata方法來判別 (靜態類別用來驗證檔案類型此FILEDROP是唯讀默認拖進來的檔案是相等)
+                    //string s = (string)e.Data.GetData(DataFormats.FileDrop);其實FileDrop是string沒錯
+                    //但是我們可能會一次拉很多個file進來，所以要用一個陣列去接住它
+
+                    Getpictrue(prizPic);
+
+                    for (int i = 0; i <= prizPic.Length - 1; i++)
+                    {
+                        PictureBox p = new PictureBox();
+
+                        p.Height = 150;
+                        p.Width = 150;
+
+                        p.SizeMode = PictureBoxSizeMode.StretchImage;
+                        p.BorderStyle = BorderStyle.FixedSingle;
+                        p.Image = (Image)Image.FromFile(prizPic[i]);
+                        fp.flowLayoutPanel1.Controls.Add(p);
+
+                        //fp.pictureBox1.Image = (Image)Image.FromFile(PictureFiles[0]);  // put the pic into the fp.picturesbox.image
+                        //fp.pictureBox2.Image = (Image)Image.FromFile(PictureFiles[1]);
+                        //fp.pictureBox3.Image = (Image)Image.FromFile(PictureFiles[2]);
+                    }
+                }
+
+
+
+
+
+
+
+
+            }
+        }
+
+        private void flowLayoutPanel1_DragEnter(object sender, DragEventArgs e)
+        {
+         e.Effect = DragDropEffects.Copy;
+        }
+
+        private void toolStripComboBox1_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if(this.toolStripComboBox1.SelectedIndex==2)
+            {
+                this.flowLayoutPanel1.Controls.Clear();
+               // this.pictureBox1.ImageLocation="C:/Users/neo/Desktop/WINEVENTF/WINEVENT/WINEVENT/IMG/BG.jpg";//TODO
+                //this.pictureBox1.Visible = true;//打開背景圖片儲存區塊
+            }
+            else
+            {//如果combo選到 活動圖
+                if(this.toolStripComboBox1.SelectedIndex==1)
+                {
+                    this.flowLayoutPanel1.Controls.Clear(); //圖區清除
+                }
+            }
+        }
+        //真.儲存圖區 openfile
+        private void pictureBox2_Click(object sender, EventArgs e)
+        {
+            if (this.openFileDialog1.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            
+            {
+                this.pictureBox2.Image = Image.FromFile(this.openFileDialog1.FileName);
+            }
+
+        }
+
+        private void pictureBox3_Click(object sender, EventArgs e)
+        {
+            if(this.openFileDialog2.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            
+            {
+                this.pictureBox3.Image = Image.FromFile(this.openFileDialog2.FileName);
+            }
+        }
+
+        private void pictureBox4_Click(object sender, EventArgs e)
+        {
+            if (this.openFileDialog3.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                this.pictureBox4.Image = Image.FromFile(this.openFileDialog3.FileName);
+            }
+        }
+
+        //分批上傳鈕 
+        private void button1_Click(object sender, EventArgs e)
+        {
+
+            
+            using (SqlConnection con = new SqlConnection(Settings.Default.ILWADO))
+            {
+                using(SqlCommand cmd = new SqlCommand("insert into EventPicture(EventPic,EventID,PrzeImage,PrizeDes,Rank) Values(@EventPic,@EventID,@PrzeImage,@PrizeDes,@Rank)",con))
+                {
+//第一名圖 
+            if (pictureBox2.Image != null)//如果圖區有圖片
+            {  //轉型進陣列
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    this.pictureBox2.Image.Save(ms, ImageFormat.Bmp);
+                    bytes2 = ms.GetBuffer();
+                }
+                con.Open();
+                cmd.Parameters.Add("@EventPic", SqlDbType.VarBinary).Value = bytes2;
+                cmd.Parameters.Add("@PrizeDes", SqlDbType.NVarChar).Value = this.textBox6.Text;
+                cmd.Parameters.Add("@Rank", SqlDbType.Int).Value = this.pictureBox2.Tag;
+                cmd.Parameters.Add("@PrzeImage", SqlDbType.Bit).Value = this.checkBox1.Checked;
+                cmd.Parameters.Add("@EventID", SqlDbType.Int).Value = this.textBox3.Text;
+                cmd.ExecuteNonQuery(); 
+               
+                con.Close();
+            }
+            else
+            {
+                MessageBox.Show("請選擇上傳圖片"); 
+            }
+                }
+            }
+            MessageBox.Show("一號圖片上傳成功");
+            using (SqlConnection con = new SqlConnection(Settings.Default.ILWADO))
+            {
+                using (SqlCommand cmd = new SqlCommand("insert into EventPicture(EventPic,EventID,PrzeImage,PrizeDes,Rank) Values(@EventPic,@EventID,@PrzeImage,@PrizeDes,@Rank)", con))
+
+                    if (pictureBox3.Image != null)//如果圖區有圖片
+                    {  //轉型進陣列
+                        using (MemoryStream ms = new MemoryStream())
+                        {
+                            this.pictureBox3.Image.Save(ms, ImageFormat.Bmp);
+                            bytes2 = ms.GetBuffer();
+                        }
+                        con.Open();
+                        cmd.Parameters.Add("@EventPic", SqlDbType.VarBinary).Value = bytes2;
+                        cmd.Parameters.Add("@PrizeDes", SqlDbType.NVarChar).Value = this.textBox7.Text;
+                        cmd.Parameters.Add("@Rank", SqlDbType.Int).Value = this.pictureBox3.Tag;
+                        cmd.Parameters.Add("@PrzeImage", SqlDbType.Bit).Value = this.checkBox3.Checked;
+                        cmd.Parameters.Add("@EventID", SqlDbType.Int).Value = this.textBox4.Text;
+                        cmd.ExecuteNonQuery();
+
+                        con.Close();
+                    }
+                    else
+                    {
+                        MessageBox.Show("請選擇上傳圖片");
+                    }
+            }
+
+
+            MessageBox.Show("二號圖片上傳成功");
+            using (SqlConnection con = new SqlConnection(Settings.Default.ILWADO))
+            {
+                using (SqlCommand cmd = new SqlCommand("insert into EventPicture(EventPic,EventID,PrzeImage,PrizeDes,Rank) Values(@EventPic,@EventID,@PrzeImage,@PrizeDes,@Rank)", con))
+
+                    if (pictureBox3.Image != null)//如果圖區有圖片
+                    {  //轉型進陣列
+                        using (MemoryStream ms = new MemoryStream())
+                        {
+                            this.pictureBox4.Image.Save(ms, ImageFormat.Bmp);
+                            bytes2 = ms.GetBuffer();
+                        }
+                        con.Open();
+                        cmd.Parameters.Add("@EventPic", SqlDbType.VarBinary).Value = bytes2;
+                        cmd.Parameters.Add("@PrizeDes", SqlDbType.NVarChar).Value = this.textBox8.Text;
+                        cmd.Parameters.Add("@Rank", SqlDbType.Int).Value = this.pictureBox4.Tag;
+                        cmd.Parameters.Add("@PrzeImage", SqlDbType.Bit).Value = this.checkBox4.Checked;
+                        cmd.Parameters.Add("@EventID", SqlDbType.Int).Value = this.textBox5.Text;
+                        cmd.ExecuteNonQuery();
+
+                        con.Close();
+                    }
+                    else
+                    {
+                        MessageBox.Show("請選擇上傳圖片");
+                    }
+            }
+
+
+            MessageBox.Show("三號圖片上傳成功");
+                
+       
+        }
+
+        private void button6_Click(object sender, EventArgs e)
+        {
+          
+        //    using(SqlConnection con =new SqlConnection(Settings.Default.ILWADO))
+        //    {
+        //        using(SqlCommand cmd =new SqlCommand("insert into EventPicture(EventPic,EventID,PrzeImage,PrizeDes,Rank) Values(@EventPic,@EventID,@PrzeImage,@PrizeDes,@Rank)",con))
+
+        //    if (pictureBox3.Image != null)//如果圖區有圖片
+        //    {  //轉型進陣列
+        //        using (MemoryStream ms = new MemoryStream())
+        //        {
+        //            this.pictureBox3.Image.Save(ms, ImageFormat.Bmp);
+        //            bytes2 = ms.GetBuffer();
+        //        }
+        //        con.Open();
+        //        cmd.Parameters.Add("@EventPic", SqlDbType.VarBinary).Value = bytes2;
+        //        cmd.Parameters.Add("@PrizeDes", SqlDbType.NVarChar).Value = this.textBox7.Text;
+        //        cmd.Parameters.Add("@Rank", SqlDbType.Int).Value = this.pictureBox3.Tag;
+        //        cmd.Parameters.Add("@PrzeImage", SqlDbType.Bit).Value = this.checkBox3.Checked;
+        //        cmd.Parameters.Add("@EventID", SqlDbType.Int).Value = this.textBox4.Text;
+        //        cmd.ExecuteNonQuery(); 
+               
+        //        con.Close();
+        //    }
+        //    else
+        //    {
+        //        MessageBox.Show("請選擇上傳圖片"); 
+        //    }
+        //        }
+            
+            
+        //MessageBox.Show("二號圖片上傳成功");
+                
+                
+                
+           }
+
+        private void button7_Click(object sender, EventArgs e)
+        {
+        
+
+        //     using(SqlConnection con =new SqlConnection(Settings.Default.ILWADO))
+        //    {
+        //        using(SqlCommand cmd =new SqlCommand("insert into EventPicture(EventPic,EventID,PrzeImage,PrizeDes,Rank) Values(@EventPic,@EventID,@PrzeImage,@PrizeDes,@Rank)",con))
+
+        //    if (pictureBox3.Image != null)//如果圖區有圖片
+        //    {  //轉型進陣列
+        //        using (MemoryStream ms = new MemoryStream())
+        //        {
+        //            this.pictureBox4.Image.Save(ms, ImageFormat.Bmp);
+        //            bytes2 = ms.GetBuffer();
+        //        }
+        //        con.Open();
+        //        cmd.Parameters.Add("@EventPic", SqlDbType.VarBinary).Value = bytes2;
+        //        cmd.Parameters.Add("@PrizeDes", SqlDbType.NVarChar).Value = this.textBox8.Text;
+        //        cmd.Parameters.Add("@Rank", SqlDbType.Int).Value = this.pictureBox4.Tag;
+        //        cmd.Parameters.Add("@PrzeImage", SqlDbType.Bit).Value = this.checkBox4.Checked;
+        //        cmd.Parameters.Add("@EventID", SqlDbType.Int).Value = this.textBox5.Text;
+        //        cmd.ExecuteNonQuery(); 
+               
+        //        con.Close();
+        //    }
+        //    else
+        //    {
+        //        MessageBox.Show("請選擇上傳圖片"); 
+        //    }
+        //        }
+            
+            
+        //MessageBox.Show("三號圖片上傳成功");
+                
+
+
+
+
+        }
+        //活動內容描述 及時顯現
+        private void textBox2_TextChanged(object sender, EventArgs e)
+        {
+            this.fp.label9.Text = this.textBox2.Text;
+        }
+        //DEMO
+        private void button4_Click(object sender, EventArgs e)
+        {
+            this.textBox1.Text = "募集!!~夏日涼涼泳裝辣妹票選";
+            this.textBox2.Text = "每到夏天我想去海邊～～夏天真是日頭炎炎，要抵抗這麼強烈的暑氣，一定要去海邊玩一下啊～大方SHOW出你自己";
+            this.dateTimePicker1.Value = DateTime.Now;
+            //this.dateTimePicker2.Value = DateTime.Now.AddDays(7);
+            this.pictureBox1.Visible = true;
+            this.pictureBox2.Visible = true;
+            this.pictureBox3.Visible = true;
+            this.pictureBox4.Visible = true;
+        }
+        //DEMO 獎品圖 
+        //private void button6_Click_1(object sender, EventArgs e)
+        //{
+        //    this.pictureBox2.ImageLocation=".../IMG/p1.jpg";
+        //}
+        //DEMO 是否為獎品
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+         
+            this.checkBox3.Checked = true;
+            this.checkBox4.Checked = true;
+            if(this.checkBox1.Checked==false)
+            {
+                this.checkBox3.Checked = false;
+                this.checkBox4.Checked = false;
+            }
+          
+        }
+
+
+
+
+
+        }
+
+    
+
+
+        
+        
+        
+        
+
+
+
+        
+        
+       
+
+
+
+
+        
+      
+    }
+
+
