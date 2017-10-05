@@ -17,13 +17,13 @@ namespace WINEVENT
     public partial class FrmEvent : Form
     {
         bool btn = false;
-        byte[] bytes2;//活動圖OR獎品
+        byte[] bytes2;//event pic or prizze
         
-        byte[] bytes;//背景圖陣列
+        byte[] bytes;// add the background pic in array
         public FrmEvent()
         {
             InitializeComponent();
-            this.pictureBox1.AllowDrop = true;
+            this.pictureBox1.AllowDrop = true; 
             this.pictureBox1.DragEnter += pictureBox1_DragEnter;      
             this.pictureBox1.DragDrop +=pictureBox1_DragDrop;
             this.Height = 1000; this.Width = 1400;
@@ -49,7 +49,7 @@ void pictureBox1_DragEnter(object sender, DragEventArgs e)
     e.Effect = DragDropEffects.Copy;
     string[] filenames = (string[])e.Data.GetData(System.Windows.Forms.DataFormats.FileDrop);
 
-    //用陣列接住拖曳進來的檔案括號轉型 資料格式是屬於拖曳進來的檔案
+    // use array catch file drog in remember convert to string[]
     this.pictureBox1.Image = Image.FromFile(filenames[0]);	
    
 }
@@ -57,18 +57,18 @@ void pictureBox1_DragEnter(object sender, DragEventArgs e)
         FrmPrivew fp = new FrmPrivew();
      
         
-        string[] prizPic = new string[1];//建立一個新陣列
+        string[] prizPic = new string[1];//create prizarray
 
         private void Getpictrue(string[] PictureFiles)
-        {//用字串陣列存圖案
+        {//set pram
 
             for (int i = 0; i <= PictureFiles.Length - 1; i++)
-            {//勿超過陣列最大值記得減一
-                try//防止非image檔案
+            {
+                try// avoid  unimage files 
                 {
                     PictureBox p = new PictureBox();
                     p.Image = (Image)Image.FromFile(PictureFiles[i]);
-                    //(轉型為IMAGE類別)圖片用image類別的靜態方法fromfile (讀取方法指定的型別(此為陣列)(陣列內元素的數量))
+                    //convert to  inmage   use the image class's static method 
                     p.SizeMode = PictureBoxSizeMode.StretchImage;
                     p.BorderStyle = BorderStyle.FixedSingle;
                     //p.MouseEnter += p_MouseEnter;
@@ -97,7 +97,7 @@ void pictureBox1_DragEnter(object sender, DragEventArgs e)
            
 
         }
-        public void GetForm(Form f)//內部視窗呼叫方法
+        public void GetForm(Form f)//call the other form
         {
             this.splitContainer4.Panel2.Controls.Clear();
             f.Dock = DockStyle.Fill;
@@ -106,7 +106,7 @@ void pictureBox1_DragEnter(object sender, DragEventArgs e)
             this.splitContainer4.Panel2.Controls.Add(f);
         }
 
-        //活動主題 即時顯示
+        //Event title   wysiwyg
         private void textBox1_TextChanged(object sender, EventArgs e)
         {
             if (this.textBox1.Text != null)
@@ -118,7 +118,7 @@ void pictureBox1_DragEnter(object sender, DragEventArgs e)
 
       
 
-        //清除圖片區圖片
+        //clear
         private void toolStripButton2_Click(object sender, EventArgs e)
         {
             if (this.flowLayoutPanel1.Controls != null)
@@ -129,7 +129,7 @@ void pictureBox1_DragEnter(object sender, DragEventArgs e)
         }
 
   
-        //日期選擇器重設--設為今日
+        //datetime picker reset (getdate
         private void button2_Click(object sender, EventArgs e)
         {
             this.dateTimePicker1.Value = DateTime.Now;
@@ -146,13 +146,13 @@ void pictureBox1_DragEnter(object sender, DragEventArgs e)
         {
             fp.label6.Text = this.dateTimePicker2.Value.ToShortDateString();
         }
-        //送出資料到資料庫
+        // click and send it to DB
         private void button3_Click(object sender, EventArgs e)
         {
-            //開連線新增資料進資料庫 活動細節
-            int NewId;//紀錄產生的活動ID
-            using (SqlConnection con = new SqlConnection(Settings.Default.ILWADO))
-            {//下command
+            
+            int NewId;//event eID
+            using (SqlConnection con = new SqlConnection(Settings.Default.ILWADO)) //created  connection 
+            {//added command
                 using (SqlCommand cmd = new SqlCommand("Insert into  Event (BackgroundImage,EventName,BeginDate,EndDate,EventDes) Values(@BackgroundImage,@EventName,@BeginDate,@EndDate,@EventDes) SELECT CAST(scope_identity() AS int)", con))
                 {
                     con.Open();
@@ -173,11 +173,11 @@ void pictureBox1_DragEnter(object sender, DragEventArgs e)
                     cmd.Parameters.Add("@BackgroundImage", SqlDbType.VarBinary).Value = bytes;
                     cmd.Parameters.Add("@EventDes", SqlDbType.NVarChar).Value = this.textBox2.Text;
                     //cmd.ExecuteNonQuery();
-                    NewId = (int)cmd.ExecuteScalar();//取得目前此筆輸入的ID
+                    NewId = (int)cmd.ExecuteScalar();//get this active's id
                     MessageBox.Show("新增第" + NewId + "活動");
                 }
 
-                con.Close();//關連線
+                con.Close();//close 
             }
         }
                               
@@ -187,7 +187,7 @@ void pictureBox1_DragEnter(object sender, DragEventArgs e)
          
     
 
-        //活動圖預覽時
+        //event pic prview 
         private void flowLayoutPanel1_DragDrop(object sender, DragEventArgs e)
         {
             if (this.toolStripComboBox1.SelectedIndex == 1)
@@ -196,7 +196,7 @@ void pictureBox1_DragEnter(object sender, DragEventArgs e)
                 
                 string[] PictureFiles = (string[])e.Data.GetData(DataFormats.FileDrop);
 
-                if (e.Data.GetDataPresent(DataFormats.FileDrop))
+                if (e.Data.GetDataPresent(DataFormats.FileDrop)) if the files are send by drop 
                 {//判斷 事件驅動(e)傳進來的檔案用getdata方法來判別 (靜態類別用來驗證檔案類型此FILEDROP是唯讀默認拖進來的檔案是相等)
                     //string s = (string)e.Data.GetData(DataFormats.FileDrop);其實FileDrop是string沒錯
                     //但是我們可能會一次拉很多個file進來，所以要用一個陣列去接住它
